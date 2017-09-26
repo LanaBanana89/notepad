@@ -1,1 +1,8 @@
 .idea
+.gitignore
+.idea/encodings.xml
+.idea/inspectionProfiles/
+.idea/misc.xml
+.idea/modules.xml
+.idea/notepad.iml
+.idea/workspace.xml
