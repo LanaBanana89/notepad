@@ -44,7 +44,6 @@ if result.is_a? Post
   result.to_string.each do |line|
     puts line
   end
-
 else # покажем таблицу результатов
 
   print "| id\t| @type\t|  @created_at\t\t\t|  @text\t\t\t|  @url\t\t|  @due_date \t"

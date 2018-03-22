@@ -1,7 +1,6 @@
 require 'sqlite3'
 
 class Post
-
   @@SQLITE_DB_FILE = 'notepad.sqlite'
 
   def self.post_types
@@ -12,14 +11,23 @@ class Post
     return post_types[type].new
   end
 
+  # вернуть запись по id
   def self.find_by_id(id)
     # Если id не передали, мы ничего не ищем, а возвращаем nil
     return if id.nil?
 
     db= SQLite3::Database.open(@@SQLITE_DB_FILE)
+
     db.results_as_hash = true
 
-    result = db.execute("SELECT * FROM posts WHERE  rowid = ?", id)
+    # ловим ошибку, если с базой данных проблемы
+    begin
+      result = db.execute("SELECT * FROM posts WHERE  rowid = ?", id)
+    rescue SQLite3::SQLException => e
+      # Если возникла ошибка, пишем об этом пользователю и выводим текст ошибки
+      puts "Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}"
+      abort e.message
+    end
 
     result = result[0] if result.is_a? Array
 
@@ -35,24 +43,39 @@ class Post
     end
   end
 
+  # 2. вернуть таблицу записей
   def self.find_all(limit, type)
     db= SQLite3::Database.open(@@SQLITE_DB_FILE)
-    db.results_as_hash = false # 2. вернуть таблицу записей
+
+    db.results_as_hash = false
 
     # формируем запрос в базу с нужными условиями
     query = "SELECT rowid, * FROM posts "
-
     query += "WHERE type = :type " unless type.nil?
     query += "ORDER by rowid DESC "
-
     query += "LIMIT :limit " unless limit.nil?
 
-    statement = db.prepare(query)
+    # Перед подготовкой запроса поставим конструкцию begin, чтобы поймать
+    # возможные ошибки например, если в базе нет таблицы posts.
+    begin
+      statement = db.prepare(query)
+    rescue SQLite3::SQLException => e
+      puts "Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}"
+      abort e.message
+    end
 
     statement.bind_param('type', type) unless type.nil?
     statement.bind_param('limit', limit) unless limit.nil?
 
-    result = statement.execute!
+    # Перед запросом поставим конструкцию begin, чтобы поймать возможные ошибки
+    # например, если в базе нет таблицы posts.
+    begin
+      result = statement.execute!
+    rescue SQLite3::SQLException => e
+      puts "Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}"
+      abort e.message
+    end
+
     statement.close
     db.close
 
@@ -89,21 +112,28 @@ class Post
   end
 
   def save_to_db
-    db = SQLite3::Database.open(@@SQLITE_DB_FILE) # открываем базу данных
+    # открываем базу данных
+    db= SQLite3::Database.open(@@SQLITE_DB_FILE)
     db.results_as_hash = true
 
-    db.execute(
-          "INSERT INTO posts (" +
-           to_db_hash.keys.join(',') +
-              ")" +
-              " VALUES (" +
-              ('?,'*to_db_hash.keys.size).chomp(',') +
-              ")",
-           to_db_hash.values
-    )
+    # Перед запросом поставим конструкцию begin, чтобы поймать возможные ошибки
+    # например, если в базе нет таблицы posts.
+    begin
+      db.execute(
+            "INSERT INTO posts (" +
+            to_db_hash.keys.join(',') +
+                ")" +
+                " VALUES (" +
+                ('?,'*to_db_hash.keys.size).chomp(',') +
+                ")",
+            to_db_hash.values
+      )
+    rescue SQLite3::SQLException => e
+      puts "Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}"
+      abort e.message
+    end
 
     insert_row_id = db.last_insert_row_id
-
     db.close
     return insert_row_id
   end
