@@ -12,50 +12,51 @@ class Post
     return post_types[type].new
   end
 
-  def self.find(limit, type, id)
+  def self.find_by_id(id)
+    # Если id не передали, мы ничего не ищем, а возвращаем nil
+    return if id.nil?
 
     db= SQLite3::Database.open(@@SQLITE_DB_FILE)
+    db.results_as_hash = true
 
-    # 1. конкретная запись
-    if !id.nil?
-        db.results_as_hash = true
+    result = db.execute("SELECT * FROM posts WHERE  rowid = ?", id)
 
-        result = db.execute("SELECT * FROM posts WHERE  rowid = ?", id)
+    result = result[0] if result.is_a? Array
 
-        result = result[0] if result.is_a? Array
+    db.close
 
-        db.close
-
-      if result.empty?
-        puts "Такой id #{id} не найден в базе :("
-        return nil
-      else
-        post = create(result['type'])
-        post.load_data(result)
-        return post
-      end
+    if result.empty?
+      puts "Такой id #{id} не найден в базе :("
+      return nil
     else
-      db.results_as_hash = false # 2. вернуть таблицу записей
-
-      # формируем запрос в базу с нужными условиями
-      query = "SELECT rowid, * FROM posts "
-
-      query += "WHERE type = :type " unless type.nil?
-      query += "ORDER by rowid DESC "
-
-      query += "LIMIT :limit " unless limit.nil?
-
-      statement = db.prepare(query)
-
-      statement.bind_param('type', type) unless type.nil?
-      statement.bind_param('limit', limit) unless limit.nil?
-
-      result = statement.execute!
-      statement.close
-      db.close
-
-      return result
+      post = create(result['type'])
+      post.load_data(result)
+      return post
     end
+  end
+
+  def self.find_all(limit, type)
+    db= SQLite3::Database.open(@@SQLITE_DB_FILE)
+    db.results_as_hash = false # 2. вернуть таблицу записей
+
+    # формируем запрос в базу с нужными условиями
+    query = "SELECT rowid, * FROM posts "
+
+    query += "WHERE type = :type " unless type.nil?
+    query += "ORDER by rowid DESC "
+
+    query += "LIMIT :limit " unless limit.nil?
+
+    statement = db.prepare(query)
+
+    statement.bind_param('type', type) unless type.nil?
+    statement.bind_param('limit', limit) unless limit.nil?
+
+    result = statement.execute!
+    statement.close
+    db.close
+
+    return result
   end
 
   def initialize
@@ -98,7 +99,7 @@ class Post
               " VALUES (" +
               ('?,'*to_db_hash.keys.size).chomp(',') +
               ")",
-          to_db_hash.values
+           to_db_hash.values
     )
 
     insert_row_id = db.last_insert_row_id
