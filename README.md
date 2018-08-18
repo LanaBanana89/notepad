@@ -27,6 +27,13 @@ sudo apt-get install  sqlite3
 gem install sqlite3
 ```
 
+6. Просмотр заметок:
+
+  Для просмотра заметок необходимо набрать следующие команды в терминале:
+- по id: ruby read.rb --id 1
+- по типу: ruby read.rb --type Link
+- по количеству последних постов: ruby read.rb --limit 10
+
 ## Скриншоты
 
 ### Заметка
