@@ -7,10 +7,10 @@ if (Gem.win_platform?)
   end
 end
 
-require_relative 'post.rb'
-require_relative 'tasks.rb'
-require_relative 'memo.rb'
-require_relative 'link.rb'
+require_relative 'post'
+require_relative 'tasks'
+require_relative 'memo'
+require_relative 'link'
 
 #id, limit, type
 
